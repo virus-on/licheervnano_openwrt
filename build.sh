@@ -36,8 +36,9 @@ stage_patches() {
 	[ -n "$pin" ] || die "openwrt is not a submodule of this repository"
 	git -C "$WRT" am --abort >/dev/null 2>&1 || true
 	git -C "$WRT" checkout --quiet --force -B licheervnano "$pin"
+	# --keep-cr: the AIC8800 package carries patches for CRLF source files.
 	git -C "$WRT" -c user.name=licheervnano-build -c user.email=build@localhost \
-		am --quiet "$TOP"/patches/openwrt/*.patch
+		am --quiet --keep-cr "$TOP"/patches/openwrt/*.patch
 	git -C "$WRT" log --oneline "$pin"..HEAD
 }
 

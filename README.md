@@ -86,7 +86,7 @@ the seed again and drops your menuconfig changes.
 ```bash
 git submodule update --init --depth 1
 git -C openwrt checkout -B licheervnano "$(git ls-files -s openwrt | awk '{print $2}')"
-git -C openwrt am ../patches/openwrt/*.patch
+git -C openwrt am --keep-cr ../patches/openwrt/*.patch
 for f in packages luci routing telephony video; do echo "src-link $f $PWD/feeds/$f"; done > openwrt/feeds.conf
 cd openwrt
 ./scripts/feeds update -a && ./scripts/feeds install -a
@@ -95,7 +95,9 @@ mkdir -p files/etc && echo 'your-wifi-password' > files/etc/licheewrt-wifi-key
 make -j"$(nproc)"
 ```
 
-The image is `openwrt/bin/targets/sophgo/generic/openwrt-sophgo-generic-sipeed_licheerv-nano-we-squashfs-sdcard.img.gz`.
+`--keep-cr` matters: the AIC8800 package carries patches for source files with Windows line endings, and without it `git am`
+strips them and the driver fails to build. `git am` also needs a Git name and email to be configured. The image is
+`openwrt/bin/targets/sophgo/generic/openwrt-sophgo-generic-sipeed_licheerv-nano-we-squashfs-sdcard.img.gz`.
 
 ### Following newer OpenWrt
 
