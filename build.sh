@@ -30,7 +30,9 @@ stage_submodules() {
 # dl/, build_dir/ and files/, are kept.
 stage_patches() {
 	local pin
-	pin=$(git -C "$TOP" ls-tree HEAD openwrt | awk '{print $3}')
+	# The pin comes from the index, so `git add openwrt` after
+	# `git submodule update --remote` is enough to build on a newer OpenWrt.
+	pin=$(git -C "$TOP" ls-files -s openwrt | awk '{print $2}')
 	[ -n "$pin" ] || die "openwrt is not a submodule of this repository"
 	git -C "$WRT" am --abort >/dev/null 2>&1 || true
 	git -C "$WRT" checkout --quiet --force -B licheervnano "$pin"
