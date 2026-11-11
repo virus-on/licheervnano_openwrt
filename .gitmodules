@@ -1,0 +1,30 @@
+[submodule "openwrt"]
+	path = openwrt
+	url = https://github.com/openwrt/openwrt.git
+	shallow = true
+	ignore = all
+[submodule "feeds/packages"]
+	path = feeds/packages
+	url = https://github.com/openwrt/packages.git
+	shallow = true
+	ignore = dirty
+[submodule "feeds/luci"]
+	path = feeds/luci
+	url = https://github.com/openwrt/luci.git
+	shallow = true
+	ignore = dirty
+[submodule "feeds/routing"]
+	path = feeds/routing
+	url = https://github.com/openwrt/routing.git
+	shallow = true
+	ignore = dirty
+[submodule "feeds/telephony"]
+	path = feeds/telephony
+	url = https://github.com/openwrt/telephony.git
+	shallow = true
+	ignore = dirty
+[submodule "feeds/video"]
+	path = feeds/video
+	url = https://github.com/openwrt/video.git
+	shallow = true
+	ignore = dirty

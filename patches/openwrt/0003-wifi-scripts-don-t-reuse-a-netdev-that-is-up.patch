@@ -1,0 +1,38 @@
+From 3483d7efc2d758198d409d3e9cb0e3bfc8f585ad Mon Sep 17 00:00:00 2001
+From: Maksym Paziuk <17340729+virus-on@users.noreply.github.com>
+Date: Thu, 12 Nov 2026 00:14:14 +0200
+Subject: [PATCH 3/3] wifi-scripts: don't reuse a netdev that is up
+
+find_reusable_wdev() picked any existing interface whose operstate is
+"down". An AP interface whose carrier is down but which is still
+administratively up also reports "down", so adding a station interface
+on the same phy took over hostapd's AP netdev and the AP failed.
+
+Only reuse an interface when its IFF_UP flag is clear as well.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../config/wifi-scripts/files/usr/share/hostap/common.uc | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/package/network/config/wifi-scripts/files/usr/share/hostap/common.uc b/package/network/config/wifi-scripts/files/usr/share/hostap/common.uc
+index a7a829b..04d2120 100644
+--- a/package/network/config/wifi-scripts/files/usr/share/hostap/common.uc
++++ b/package/network/config/wifi-scripts/files/usr/share/hostap/common.uc
+@@ -68,9 +68,14 @@ function find_reusable_wdev(phyidx)
+ 		nl80211.const.NL80211_CMD_GET_INTERFACE,
+ 		nl80211.const.NLM_F_DUMP,
+ 		{ wiphy: phyidx });
+-	for (let res in data)
+-		if (trim(readfile(`/sys/class/net/${res.ifname}/operstate`)) == "down")
++	// operstate stays "down" while hostapd is still starting an AP, so also
++	// require the netdev to be administratively down. Otherwise a STA set up
++	// meanwhile renames the AP's netdev away from hostapd.
++	for (let res in data) {
++		let flags = hex(trim(readfile(`/sys/class/net/${res.ifname}/flags`) ?? "0x1"));
++		if (trim(readfile(`/sys/class/net/${res.ifname}/operstate`)) == "down" && !(flags & 1))
+ 			return res.ifname;
++	}
+ 	return null;
+ }
+ 
