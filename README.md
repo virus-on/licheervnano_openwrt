@@ -29,8 +29,8 @@ how the port was put together.
 
 ## Build
 
-The build is tested on Ubuntu 22.04. It needs about 25 GB of disk and an hour or two on a fast machine, most of it spent
-building the toolchain the first time. Don't build as root, and keep the checkout on a path without spaces.
+The build is tested on Ubuntu 22.04. It needs about 15 GB of disk. The first build took 25 minutes on 16 threads, most of it
+spent on the toolchain. Rebuilds take a few minutes. Don't build as root, and keep the checkout on a path without spaces.
 
 Install the build dependencies:
 
