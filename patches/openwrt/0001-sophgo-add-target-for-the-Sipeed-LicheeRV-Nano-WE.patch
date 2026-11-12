@@ -1,4 +1,4 @@
-From 35f2a0c0df0fd73087fea0ff76f4901b1b14bd90 Mon Sep 17 00:00:00 2001
+From c351b27adf8fb2625398b72665297b38b50afad2 Mon Sep 17 00:00:00 2001
 From: Maksym Paziuk <17340729+virus-on@users.noreply.github.com>
 Date: Thu, 12 Nov 2026 00:14:14 +0200
 Subject: [PATCH 1/3] sophgo: add target for the Sipeed LicheeRV Nano WE
@@ -33,6 +33,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  target/linux/sophgo/base-files/etc/inittab    |   3 +
  .../etc/uci-defaults/90-licheewrt-network     |  27 ++
  .../etc/uci-defaults/91-licheewrt-firewall    |  12 +
+ .../base-files/lib/preinit/79_grow_rootfs     |  42 ++
  .../base-files/lib/preinit/79_move_config     |  16 +
  .../sophgo/base-files/lib/upgrade/platform.sh |  22 +
  target/linux/sophgo/config-6.18               | 404 ++++++++++++++++++
@@ -48,13 +49,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  .../sophgo/image/gen_sophgo_sdcard_img.sh     |  34 ++
  ...iscv-dts-sophgo-add-licheerv-nano-we.patch |  11 +
  ...1-sophgo-add-phy-and-restart-drivers.patch |  53 +++
- 21 files changed, 1158 insertions(+)
+ 22 files changed, 1200 insertions(+)
  create mode 100644 target/linux/sophgo/Makefile
  create mode 100644 target/linux/sophgo/base-files/etc/board.d/02_network
  create mode 100644 target/linux/sophgo/base-files/etc/hotplug.d/ieee80211/20-licheewrt-ap
  create mode 100644 target/linux/sophgo/base-files/etc/inittab
  create mode 100644 target/linux/sophgo/base-files/etc/uci-defaults/90-licheewrt-network
  create mode 100755 target/linux/sophgo/base-files/etc/uci-defaults/91-licheewrt-firewall
+ create mode 100644 target/linux/sophgo/base-files/lib/preinit/79_grow_rootfs
  create mode 100644 target/linux/sophgo/base-files/lib/preinit/79_move_config
  create mode 100644 target/linux/sophgo/base-files/lib/upgrade/platform.sh
  create mode 100644 target/linux/sophgo/config-6.18
@@ -232,6 +234,54 @@ index 0000000..c1f4d01
 +EOF
 +
 +exit 0
+diff --git a/target/linux/sophgo/base-files/lib/preinit/79_grow_rootfs b/target/linux/sophgo/base-files/lib/preinit/79_grow_rootfs
+new file mode 100644
+index 0000000..8432cb0
+--- /dev/null
++++ b/target/linux/sophgo/base-files/lib/preinit/79_grow_rootfs
+@@ -0,0 +1,42 @@
++# Grows the root partition to the end of the SD card, so the writable overlay
++# that fstools puts after the squashfs gets the whole card. This runs before
++# mount_root. On first boot and after an upgrade the overlay isn't formatted
++# yet, so fstools formats it at the new size. An overlay formatted before the
++# partition grew keeps its old size until the next upgrade.
++
++grow_rootfs() {
++	local diskdev partdev p3 start size total newsize
++
++	. /lib/upgrade/common.sh
++
++	export_bootdevice && export_partdevice diskdev 0 && export_partdevice partdev 2 || return 0
++	# Only the last partition of a DOS partition table is grown.
++	export_partdevice p3 3 && return 0
++	[ "$(dd if="/dev/$diskdev" bs=1 skip=510 count=2 2>/dev/null | hexdump -v -e '2/1 "%02x"')" = 55aa ] || return 0
++
++	start=$(cat "/sys/class/block/$partdev/start")
++	size=$(cat "/sys/class/block/$partdev/size")
++	total=$(cat "/sys/class/block/$diskdev/size")
++	newsize=$((total - start))
++	[ $newsize -le $((0xffffffff)) ] || newsize=$((0xffffffff))
++	[ $newsize -gt $((size + 2048)) ] || return 0
++
++	# Partition entry 2 is at byte 462. Its first sector is at 470 and its
++	# length in sectors at 474, both 32-bit little endian.
++	set -- $(dd if="/dev/$diskdev" bs=1 skip=470 count=8 2>/dev/null | hexdump -v -e '2/4 "%u "')
++	[ "$1" = "$start" ] && [ "$2" = "$size" ] || return 0
++	printf "$(printf '\\%03o' $((newsize & 255)) $((newsize >> 8 & 255)) $((newsize >> 16 & 255)) $((newsize >> 24 & 255)))" |
++		dd of="/dev/$diskdev" bs=1 seek=474 count=4 conv=notrunc 2>/dev/null
++	sync
++
++	# The kernel can resize a mounted partition. If that fails, the new table
++	# is read on the next boot.
++	partx -u -n 2 "/dev/$diskdev" 2>/dev/null
++	if [ "$(cat "/sys/class/block/$partdev/size")" != "$newsize" ]; then
++		echo "- grow root partition: rebooting to apply -"
++		reboot -f
++	fi
++	echo "- grow root partition: $partdev is now $((newsize / 2048)) MiB -"
++}
++
++boot_hook_add preinit_main grow_rootfs
 diff --git a/target/linux/sophgo/base-files/lib/preinit/79_move_config b/target/linux/sophgo/base-files/lib/preinit/79_move_config
 new file mode 100644
 index 0000000..ae720f3

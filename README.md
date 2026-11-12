@@ -136,6 +136,8 @@ On Windows or macOS, [balenaEtcher](https://etcher.balena.io/) writes the `.img.
    System, Administration. Until you do, anyone on the Wi-Fi can log in, over SSH too.
 4. Change the Wi-Fi password under Network, Wireless. Every copy of a published image shares the same password.
 
+On first boot, the root partition grows to the end of the card, so the whole card is free for settings and packages.
+
 The LAN is `192.168.8.1/24`, so it doesn't clash with an upstream router on `192.168.1.x`. The Wi-Fi country is set to `UA`.
 Set your own under Network, Wireless, Advanced settings.
 

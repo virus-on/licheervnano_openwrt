@@ -94,7 +94,16 @@ The first images used an ext4 root. The release uses a squashfs root with a writ
 always get back to the image's contents. OpenWrt's `fstools` puts the overlay in the free space after the squashfs image, at
 the next 64 KiB boundary. The image recipe zeroes 1 MiB there, so writing a new image always starts with a fresh overlay.
 
-Upgrades use OpenWrt's existing `legacy-sdcard` helpers, which write the boot and root partitions from the `.img.gz`.
+The image's root partition is 256 MB, which left about 200 MB for the overlay. A preinit script, `79_grow_rootfs`, grows
+the partition to the end of the card before `mount_root` runs. It rewrites the partition's length in the MBR, then has the
+kernel resize the partition with `partx`, which works while the squashfs is mounted from it. If the resize fails, the script
+reboots and the kernel reads the new table at boot. `fstools` sets up the overlay's loop device after that and formats it
+at the full size: on a 32 GB card, that's a 29.6 GB overlay, formatted in about 6 seconds. The script only grows the last
+partition of a DOS partition table, and only when the table matches what the kernel sees.
+
+Upgrades use OpenWrt's existing `legacy-sdcard` helpers. When the image's partition table matches the card's, they write
+the boot and root partitions from the `.img.gz`. Once the root partition has grown, the tables differ, so they write the
+whole image, partition table included, and the next boot grows the partition again before the new overlay is formatted.
 Settings travel across the upgrade on the FAT boot partition: `sysupgrade` saves them there, and a preinit script moves
 them back on the next boot. For this to work:
 

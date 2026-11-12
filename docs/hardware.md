@@ -53,10 +53,10 @@ All of these come from Sipeed's release unchanged. The port's device tree relies
 | Partition | Size | Contents |
 | --- | --- | --- |
 | 1, FAT | 64 MB | `fip.bin`, `boot.sd`, `logo.jpeg` |
-| 2 | 256 MB | squashfs root, with the writable overlay after it |
+| 2 | 256 MB in the image, grown to the end of the card on first boot | squashfs root, with the writable overlay after it |
 
-The overlay is F2FS, created on first boot in the space after the squashfs image. A factory reset formats it again. Space on
-the card beyond these 320 MB is unused.
+On first boot, the root partition is grown to fill the card, and the overlay is created as F2FS in the space after the
+squashfs image. The image itself takes 322 MB, so a 512 MB card is the smallest that fits.
 
 ## Boot files
 
